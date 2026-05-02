@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayFlow — Payment Processor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg: #080b10; --surface: #0d1117; --surface2: #161b22; --surface3: #1c2128;
+            --border: rgba(255,255,255,0.07); --border-strong: rgba(255,255,255,0.14);
+            --text: #e6edf3; --text-muted: #7d8590; --text-subtle: #484f58;
+            --accent: #58a6ff; --accent-glow: rgba(88,166,255,0.15);
+            --green: #3fb950; --green-glow: rgba(63,185,80,0.12);
+            --red: #f85149; --red-glow: rgba(248,81,73,0.12);
+            --gold: #d29922; --purple: #bc8cff; --orange: #f78166;
+        }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+        body::before {
+            content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(88,166,255,0.06) 0%, transparent 60%),
+                        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(188,140,255,0.05) 0%, transparent 60%);
+        }
+        .shell { position: relative; z-index: 1; max-width: 1320px; margin: 0 auto; padding: 0 32px; }
+
+        /* ─ Header ─ */
+        header { border-bottom: 1px solid var(--border); background: rgba(8,11,16,0.85); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 100; }
+        .header-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+        .logo { display: flex; align-items: center; gap: 10px; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.25rem; letter-spacing: -0.02em; }
+        .logo-mark { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), var(--purple)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+        .badge { font-family: 'DM Mono', monospace; font-size: 0.65rem; font-weight: 500; padding: 3px 8px; border-radius: 20px; background: var(--accent-glow); color: var(--accent); border: 1px solid rgba(88,166,255,0.25); letter-spacing: 0.08em; text-transform: uppercase; }
+        .badge-green { background: var(--green-glow); color: var(--green); border-color: rgba(63,185,80,0.3); }
+        .badge-gold { background: rgba(210,153,34,0.12); color: var(--gold); border-color: rgba(210,153,34,0.3); }
+
+        /* ─ Hero ─ */
+        .hero { padding: 48px 0 36px; text-align: center; }
+        .hero h1 { font-family: 'Syne', sans-serif; font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; letter-spacing: -0.04em; line-height: 1.1; margin-bottom: 12px; background: linear-gradient(135deg, #e6edf3 30%, #7d8590); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .hero p { color: var(--text-muted); font-size: 0.95rem; max-width: 480px; margin: 0 auto; line-height: 1.7; font-weight: 300; }
+
+        /* ─ Stats Row ─ */
+        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+        .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; }
+        .stat-label { font-family: 'DM Mono', monospace; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-subtle); margin-bottom: 6px; }
+        .stat-value { font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 800; letter-spacing: -0.03em; }
+        .stat-value.green { color: var(--green); }
+        .stat-value.red { color: var(--red); }
+        .stat-value.accent { color: var(--accent); }
+        .stat-sub { font-size: 0.72rem; color: var(--text-subtle); margin-top: 3px; }
+
+        /* ─ Tabs ─ */
+        .method-tabs { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 28px; }
+        .method-tab { display: flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.82rem; font-weight: 500; cursor: pointer; transition: all 0.2s ease; font-family: 'DM Sans', sans-serif; white-space: nowrap; }
+        .method-tab:hover { border-color: var(--border-strong); color: var(--text); background: var(--surface2); }
+        .method-tab.active { background: var(--accent-glow); border-color: rgba(88,166,255,0.4); color: var(--accent); }
+
+        /* ─ Grid ─ */
+        .main-grid { display: grid; grid-template-columns: 1fr 400px; gap: 24px; align-items: start; padding-bottom: 80px; }
+
+        /* ─ Card ─ */
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+        .card-header { padding: 18px 22px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .card-title { font-family: 'Syne', sans-serif; font-size: 0.92rem; font-weight: 700; letter-spacing: -0.01em; }
+        .card-body { padding: 22px; }
+
+        /* ─ Form ─ */
+        .form-section { margin-bottom: 24px; }
+        .form-section-title { font-family: 'DM Mono', monospace; font-size: 0.68rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-subtle); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .form-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-group.full { grid-column: 1 / -1; }
+        label { font-size: 0.76rem; color: var(--text-muted); font-weight: 500; }
+        input, select { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.86rem; padding: 10px 13px; outline: none; transition: border-color 0.15s, box-shadow 0.15s; width: 100%; }
+        input:focus, select:focus { border-color: rgba(88,166,255,0.5); box-shadow: 0 0 0 3px rgba(88,166,255,0.08); }
+        input::placeholder { color: var(--text-subtle); }
+        select option { background: var(--surface2); color: var(--text); }
+        .payment-fields { display: none; }
+        .payment-fields.active { display: contents; }
+        #paymentMethod { display: none; }
+        .amount-input-wrap { position: relative; }
+        .amount-prefix { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--text-subtle); font-size: 0.9rem; pointer-events: none; }
+        .amount-input-wrap input { padding-left: 26px; }
+
+        /* ─ Submit Button ─ */
+        .btn-pay { width: 100%; padding: 13px; background: linear-gradient(135deg, var(--accent), #1a7fe0); border: none; border-radius: 10px; color: white; font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: all 0.2s ease; position: relative; overflow: hidden; letter-spacing: -0.01em; margin-top: 6px; }
+        .btn-pay:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(88,166,255,0.3); }
+        .btn-pay:active { transform: translateY(0); }
+
+        /* ─ Alert / Result ─ */
+        .alert { border-radius: 14px; padding: 20px; margin-bottom: 20px; animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .alert.success { background: var(--green-glow); border: 1px solid rgba(63,185,80,0.3); }
+        .alert.failure { background: var(--red-glow); border: 1px solid rgba(248,81,73,0.3); }
+        .alert.rate-limit { background: rgba(210,153,34,0.1); border: 1px solid rgba(210,153,34,0.35); }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .alert-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+        .alert-icon { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+        .alert.success .alert-icon { background: rgba(63,185,80,0.2); }
+        .alert.failure .alert-icon { background: rgba(248,81,73,0.2); }
+        .alert.rate-limit .alert-icon { background: rgba(210,153,34,0.2); }
+        .alert-title { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; }
+        .alert.success .alert-title { color: var(--green); }
+        .alert.failure .alert-title { color: var(--red); }
+        .alert.rate-limit .alert-title { color: var(--gold); }
+        .alert-txid { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--text-subtle); }
+        .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+        .rl { font-size: 0.68rem; color: var(--text-subtle); text-transform: uppercase; letter-spacing: 0.08em; font-family: 'DM Mono', monospace; margin-bottom: 2px; }
+        .rv { font-size: 0.85rem; color: var(--text); font-weight: 500; }
+        .result-details { background: rgba(0,0,0,0.2); border-radius: 8px; padding: 11px; font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--text-muted); line-height: 1.65; border: 1px solid var(--border); word-break: break-all; }
+
+        /* ─ Status Pill ─ */
+        .pill { font-family: 'DM Mono', monospace; font-size: 0.62rem; padding: 2px 7px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; }
+        .pill-ok { background: var(--green-glow); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
+        .pill-fail { background: var(--red-glow); color: var(--red); border: 1px solid rgba(248,81,73,0.3); }
+
+        /* ─ Transaction History ─ */
+        .tx-list { display: flex; flex-direction: column; gap: 6px; max-height: 480px; overflow-y: auto; }
+        .tx-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 9px; background: var(--surface2); border: 1px solid var(--border); transition: border-color 0.15s; cursor: default; }
+        .tx-item:hover { border-color: var(--border-strong); }
+        .tx-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+        .tx-dot.ok { background: var(--green); box-shadow: 0 0 6px rgba(63,185,80,0.5); }
+        .tx-dot.fail { background: var(--red); }
+        .tx-info { flex: 1; min-width: 0; }
+        .tx-method { font-size: 0.78rem; font-weight: 600; color: var(--text); }
+        .tx-meta { font-family: 'DM Mono', monospace; font-size: 0.66rem; color: var(--text-subtle); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tx-amount { font-family: 'DM Mono', monospace; font-size: 0.8rem; font-weight: 500; color: var(--text-muted); white-space: nowrap; }
+        .empty-state { text-align: center; padding: 28px 20px; color: var(--text-subtle); font-size: 0.82rem; }
+        .empty-state .empty-icon { font-size: 1.8rem; margin-bottom: 8px; }
+
+        /* ─ Rate limit bar ─ */
+        .quota-bar-wrap { padding: 14px 22px; border-top: 1px solid var(--border); }
+        .quota-label { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--text-subtle); margin-bottom: 6px; display: flex; justify-content: space-between; }
+        .quota-bar { height: 4px; background: var(--surface3); border-radius: 99px; overflow: hidden; }
+        .quota-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--green), var(--accent)); transition: width 0.4s ease; }
+
+        /* ─ Pattern info ─ */
+        .pattern-diagram { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px; font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--text-muted); line-height: 1.9; }
+        .pa { color: var(--accent); } .pg { color: var(--green); } .pp { color: var(--purple); }
+
+        /* ─ DB badge strip ─ */
+        .infra-strip { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; justify-content: center; }
+        .infra-pill { display: flex; align-items: center; gap: 6px; font-family: 'DM Mono', monospace; font-size: 0.7rem; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); color: var(--text-muted); background: var(--surface); }
+        .infra-dot { width: 6px; height: 6px; border-radius: 50%; }
+        .infra-dot.pg { background: #336791; box-shadow: 0 0 6px rgba(51,103,145,0.8); }
+        .infra-dot.redis { background: #d82c20; box-shadow: 0 0 6px rgba(216,44,32,0.8); }
+        .infra-dot.flyway { background: #cc0200; box-shadow: 0 0 6px rgba(204,2,0,0.8); }
+        .infra-dot.cache { background: var(--green); box-shadow: 0 0 6px rgba(63,185,80,0.6); }
+
+        /* ─ Scrollbar ─ */
+        ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+
+        /* ─ Responsive ─ */
+        @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } .stats-row { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 600px) { .shell { padding: 0 16px; } .form-grid { grid-template-columns: 1fr; } .result-grid { grid-template-columns: 1fr; } .stats-row { grid-template-columns: 1fr 1fr; } }
+
+        .fade-in { animation: fadeIn 0.5s ease both; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="shell">
+        <div class="header-inner">
+            <div class="logo">
+                <div class="logo-mark">⚡</div>
+                PayFlow
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+                <span class="badge">Strategy Pattern</span>
+                <span class="badge badge-green">Postgres</span>
+                <span class="badge" style="background:rgba(216,44,32,0.12);color:#d82c20;border-color:rgba(216,44,32,0.3);">Redis</span>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="shell">
+    <div class="hero fade-in">
+        <h1>Payment Processor</h1>
+        <p>Persistent transactions in PostgreSQL. Redis-cached reads. Sliding-window rate limiting. Strategy Pattern architecture.</p>
+    </div>
+
+    <!-- Infrastructure strip -->
+    <div class="infra-strip">
+        <div class="infra-pill"><div class="infra-dot pg"></div> PostgreSQL — Transaction Ledger</div>
+        <div class="infra-pill"><div class="infra-dot redis"></div> Redis — Cache + Rate Limiting</div>
+        <div class="infra-pill"><div class="infra-dot flyway"></div> Flyway — Schema Migrations</div>
+        <div class="infra-pill"><div class="infra-dot cache"></div> Spring Cache — @Cacheable / @CacheEvict</div>
+    </div>
+
+    <!-- Stats row -->
+    <div class="stats-row fade-in" th:if="${stats}">
+        <div class="stat-card">
+            <div class="stat-label">Total Transactions</div>
+            <div class="stat-value accent" th:text="${stats.totalTransactions}">0</div>
+            <div class="stat-sub">All time · PostgreSQL</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Successful</div>
+            <div class="stat-value green" th:text="${stats.successfulTransactions}">0</div>
+            <div class="stat-sub" th:text="${#numbers.formatDecimal(stats.successRate, 1, 1)} + '% success rate'">0%</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Failed</div>
+            <div class="stat-value red" th:text="${stats.failedTransactions}">0</div>
+            <div class="stat-sub">Validation + processor errors</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Total Volume</div>
+            <div class="stat-value" th:text="'$' + ${#numbers.formatDecimal(stats.totalVolume, 1, 2)}">$0.00</div>
+            <div class="stat-sub">Successful payments only</div>
+        </div>
+    </div>
+
+    <!-- Flash alerts -->
+    <div th:if="${result}" th:class="${result.success} ? 'alert success' : 'alert failure'">
+        <div class="alert-header">
+            <div class="alert-icon" th:text="${result.success} ? '✓' : '✗'"></div>
+            <div style="flex:1">
+                <div class="alert-title" th:text="${result.message}">Result</div>
+                <div class="alert-txid" th:text="${result.transactionId}">TXN-ID</div>
+            </div>
+            <span class="pill" th:class="${result.success} ? 'pill pill-ok' : 'pill pill-fail'" th:text="${result.status}">STATUS</span>
+        </div>
+        <div class="result-grid">
+            <div><div class="rl">Method</div><div class="rv" th:text="${result.paymentMethod}">—</div></div>
+            <div><div class="rl">Amount</div><div class="rv" th:text="${result.currency + ' ' + result.amount}">—</div></div>
+            <div><div class="rl">Recipient</div><div class="rv" th:text="${result.recipient}">—</div></div>
+            <div><div class="rl">Timestamp</div><div class="rv" th:text="${result.timestamp}">—</div></div>
+        </div>
+        <div class="result-details" th:text="${result.processorDetails}">Details</div>
+    </div>
+
+    <div th:if="${errorMessage}" th:class="${errorType == 'RATE_LIMIT'} ? 'alert rate-limit' : 'alert failure'">
+        <div class="alert-header">
+            <div class="alert-icon">⚠</div>
+            <div>
+                <div class="alert-title" th:text="${errorType == 'RATE_LIMIT'} ? 'Rate Limit Exceeded' : 'System Error'">Error</div>
+                <div class="alert-txid" th:text="${errorMessage}">Message</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment method tabs -->
+    <div class="method-tabs" id="methodTabs">
+        <button type="button" class="method-tab active" onclick="selectMethod('CREDIT_CARD', this)">💳 Credit Card</button>
+        <button type="button" class="method-tab" onclick="selectMethod('PAYPAL', this)">🅿️ PayPal</button>
+        <button type="button" class="method-tab" onclick="selectMethod('CRYPTOCURRENCY', this)">₿ Crypto</button>
+        <button type="button" class="method-tab" onclick="selectMethod('BANK_TRANSFER', this)">🏦 Bank Transfer</button>
+        <button type="button" class="method-tab" onclick="selectMethod('USSD', this)">📱 USSD</button>
+    </div>
+
+    <div class="main-grid">
+
+        <!-- LEFT: Form -->
+        <div class="card fade-in">
+            <div class="card-header">
+                <span class="card-title" id="formTitle">💳 Credit Card Payment</span>
+                <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-subtle);">Persisted to PostgreSQL</span>
+            </div>
+            <div class="card-body">
+                <form th:action="@{/process}" method="post" id="paymentForm">
+                    <input type="hidden" name="paymentMethod" id="paymentMethod" value="CREDIT_CARD">
+
+                    <!-- Common fields -->
+                    <div class="form-section">
+                        <div class="form-section-title">Transaction Details</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Recipient / Payee</label>
+                                <input type="text" name="recipient" placeholder="John Doe or company@email.com" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Description</label>
+                                <input type="text" name="description" placeholder="Invoice #1234...">
+                            </div>
+                            <div class="form-group">
+                                <label>Amount</label>
+                                <div class="amount-input-wrap">
+                                    <span class="amount-prefix">$</span>
+                                    <input type="number" name="amount" placeholder="0.00" step="0.01" min="0.01" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Currency</label>
+                                <select name="currency">
+                                    <option value="USD">USD — US Dollar</option>
+                                    <option value="EUR">EUR — Euro</option>
+                                    <option value="GBP">GBP — British Pound</option>
+                                    <option value="NGN">NGN — Nigerian Naira</option>
+                                    <option value="GHS">GHS — Ghanaian Cedi</option>
+                                    <option value="KES">KES — Kenyan Shilling</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Credit Card -->
+                    <div class="form-section payment-fields active" id="fields-CREDIT_CARD">
+                        <div class="form-section-title">Card Information</div>
+                        <div class="form-grid">
+                            <div class="form-group full">
+                                <label>Card Number</label>
+                                <input type="text" name="cardNumber" placeholder="4111 1111 1111 1111" maxlength="19" oninput="formatCard(this)">
+                            </div>
+                            <div class="form-group full">
+                                <label>Cardholder Name</label>
+                                <input type="text" name="cardHolder" placeholder="Name as on card">
+                            </div>
+                            <div class="form-group">
+                                <label>Expiry Date</label>
+                                <input type="text" name="expiryDate" placeholder="MM / YY" maxlength="7" oninput="formatExpiry(this)">
+                            </div>
+                            <div class="form-group">
+                                <label>CVV</label>
+                                <input type="password" name="cvv" placeholder="•••" maxlength="4">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PayPal -->
+                    <div class="form-section payment-fields" id="fields-PAYPAL">
+                        <div class="form-section-title">PayPal Details</div>
+                        <div class="form-grid">
+                            <div class="form-group full">
+                                <label>PayPal Email Address</label>
+                                <input type="email" name="paypalEmail" placeholder="you@paypal.com">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Crypto -->
+                    <div class="form-section payment-fields" id="fields-CRYPTOCURRENCY">
+                        <div class="form-section-title">Blockchain Details</div>
+                        <div class="form-grid">
+                            <div class="form-group full">
+                                <label>Wallet Address</label>
+                                <input type="text" name="walletAddress" placeholder="0x742d35Cc6634C0532925a3b8D4C9A2d3f6Eb8c91" style="font-family:'DM Mono',monospace;font-size:0.78rem;">
+                            </div>
+                            <div class="form-group full">
+                                <label>Cryptocurrency</label>
+                                <select name="cryptoCurrency">
+                                    <option value="BTC">₿ Bitcoin (BTC)</option>
+                                    <option value="ETH">Ξ Ethereum (ETH)</option>
+                                    <option value="USDT">₮ Tether (USDT)</option>
+                                    <option value="USDC">◎ USD Coin (USDC)</option>
+                                    <option value="SOL">◎ Solana (SOL)</option>
+                                    <option value="BNB">◈ BNB (BNB)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bank Transfer -->
+                    <div class="form-section payment-fields" id="fields-BANK_TRANSFER">
+                        <div class="form-section-title">Bank Account Details</div>
+                        <div class="form-grid">
+                            <div class="form-group full">
+                                <label>Bank Name</label>
+                                <input type="text" name="bankName" placeholder="Chase, Bank of America...">
+                            </div>
+                            <div class="form-group">
+                                <label>Account Number</label>
+                                <input type="text" name="bankAccountNumber" placeholder="000123456789">
+                            </div>
+                            <div class="form-group">
+                                <label>Routing Number (9 digits)</label>
+                                <input type="text" name="bankRoutingNumber" placeholder="021000021" maxlength="9">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- USSD -->
+                    <div class="form-section payment-fields" id="fields-USSD">
+                        <div class="form-section-title">USSD Mobile Money</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Phone Number</label>
+                                <input type="tel" name="phoneNumber" placeholder="+233 54 000 0000">
+                            </div>
+                            <div class="form-group">
+                                <label>Network Provider</label>
+                                <select name="networkProvider">
+                                    <option value="MTN">MTN Mobile Money (*165#)</option>
+                                    <option value="AIRTEL">Airtel Money (*185#)</option>
+                                    <option value="VODAFONE">Vodafone Cash (*110#)</option>
+                                    <option value="GLO">Glo Money (*777#)</option>
+                                    <option value="OTHER">Other Network (*100#)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-pay">⚡ Process Payment</button>
+                </form>
+            </div>
+
+            <!-- Rate limit quota bar -->
+            <div class="quota-bar-wrap">
+                <div class="quota-label">
+                    <span>Rate Limit (Redis · 10 req/min)</span>
+                    <span th:text="${remainingQuota} + ' remaining'">10 remaining</span>
+                </div>
+                <div class="quota-bar">
+                    <div class="quota-fill" th:style="'width:' + ${remainingQuota * 10} + '%'"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT sidebar -->
+        <div>
+            <!-- Transaction History -->
+            <div class="card fade-in" style="animation-delay:0.1s; margin-bottom:20px;">
+                <div class="card-header">
+                    <span class="card-title">Transaction History</span>
+                    <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-subtle);">PostgreSQL · cached 30s</span>
+                </div>
+                <div class="card-body" style="padding:14px;">
+                    <div class="tx-list" th:if="${!transactions.isEmpty()}">
+                        <div th:each="tx : ${transactions}" class="tx-item">
+                            <div th:class="${tx.success} ? 'tx-dot ok' : 'tx-dot fail'"></div>
+                            <div class="tx-info">
+                                <div class="tx-method" th:text="${tx.paymentMethod}">—</div>
+                                <div class="tx-meta" th:text="${tx.transactionId} + ' · ' + ${tx.formattedCreatedAt}">—</div>
+                            </div>
+                            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
+                                <div class="tx-amount" th:text="${tx.currency} + ' ' + ${tx.amount}">—</div>
+                                <span class="pill" th:class="${tx.success} ? 'pill pill-ok' : 'pill pill-fail'" th:text="${tx.status}">—</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="empty-state" th:if="${transactions.isEmpty()}">
+                        <div class="empty-icon">🧾</div>
+                        <div>No transactions yet.</div>
+                        <div style="margin-top:4px;font-size:0.73rem;">Process a payment — it'll persist to PostgreSQL.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Architecture card -->
+            <div class="card fade-in" style="animation-delay:0.2s;">
+                <div class="card-header">
+                    <span class="card-title">Architecture</span>
+                    <span class="badge">v2.0</span>
+                </div>
+                <div class="card-body" style="padding:16px;">
+                    <div class="pattern-diagram">
+<span class="pa">Request</span> → Controller<br>
+  → <span class="pg">PaymentService</span><br>
+     ├── <span class="pa">RateLimiter</span> (Redis INCR)<br>
+     ├── PaymentContext<br>
+     │   └── <span class="pp">Strategy</span>.process()<br>
+     ├── <span class="pg">TransactionRepo</span>.save()<br>
+     │   └── PostgreSQL<br>
+     └── <span class="pa">@CacheEvict</span><br>
+<br>
+<span class="pa">GET /</span> → <span class="pg">@Cacheable</span><br>
+  ├── recent-transactions (30s)<br>
+  ├── payment-stats (60s)<br>
+  └── method-stats (5m)
+                    </div>
+                    <div style="margin-top:12px;font-size:0.76rem;color:var(--text-muted);line-height:1.7;">
+                        Flyway runs <code style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--accent);">V1__</code> and <code style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--accent);">V2__</code> migrations on startup. All reads are Redis-cached; writes evict stale entries atomically.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const methodTitles = {
+        CREDIT_CARD: '💳 Credit Card Payment', PAYPAL: '🅿️ PayPal Payment',
+        CRYPTOCURRENCY: '₿ Cryptocurrency Payment', BANK_TRANSFER: '🏦 Bank Wire Transfer', USSD: '📱 USSD Mobile Money'
+    };
+    function selectMethod(method, tabEl) {
+        document.getElementById('paymentMethod').value = method;
+        document.querySelectorAll('.method-tab').forEach(t => t.classList.remove('active'));
+        tabEl.classList.add('active');
+        document.querySelectorAll('.payment-fields').forEach(f => f.classList.remove('active'));
+        const target = document.getElementById('fields-' + method);
+        if (target) target.classList.add('active');
+        document.getElementById('formTitle').textContent = methodTitles[method];
+    }
+    function formatCard(input) {
+        let v = input.value.replace(/\D/g, '').substring(0, 16);
+        input.value = v.replace(/(.{4})/g, '$1 ').trim();
+    }
+    function formatExpiry(input) {
+        let v = input.value.replace(/\D/g, '').substring(0, 4);
+        input.value = v.length >= 3 ? v.substring(0, 2) + ' / ' + v.substring(2) : v;
+    }
+    const resultCard = document.querySelector('.alert');
+    if (resultCard) resultCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+</script>
+</body>
+</html>
